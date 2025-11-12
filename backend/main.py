@@ -1,7 +1,7 @@
 # FastAPI 기본 툴
 from fastapi import FastAPI
 from pydantic import BaseModel
-from backend.model import predict_profanity
+from model import predict_profanity
 
 app = FastAPI()
 
