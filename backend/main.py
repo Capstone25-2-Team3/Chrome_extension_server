@@ -15,18 +15,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 입력 데이터 모델
-class TextInput(BaseModel):
-    sentence: str
+class TextRequest(BaseModel):
+    text: str
 
-# 예측 API
 @app.post("/predict")
-async def predict(input: TextInput):
-    result = predict_profanity(input.sentence)
-    return {
-        "sentence": input.sentence,
-        **result
-    }
+def predict(request: TextRequest):
+    result = predict_profanity(request.text)
+    return result
 
 # (선택) 기본 루트 페이지 테스트용
 @app.get("/")
