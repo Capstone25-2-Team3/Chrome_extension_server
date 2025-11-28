@@ -209,4 +209,4 @@ __marimo__/
 
 venv/
 
-backend/data/model_files/*
+backend/data/model_files/*backend/data/model_files/*
