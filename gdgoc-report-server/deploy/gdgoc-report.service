@@ -1,0 +1,34 @@
+[Unit]
+Description=GDGoC Report Server (Spring Boot)
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+
+WorkingDirectory=/home/ubuntu/gdgoc-report-server
+ExecStart=/usr/bin/java -jar -Xmx512m -Dspring.profiles.active=prod gdgoc-report.jar
+
+# 환경변수 파일에서 DB 비밀번호 등 로드
+EnvironmentFile=/home/ubuntu/gdgoc-report-server/.env
+
+# 자동 재시작
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# 로깅
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gdgoc-report
+
+# 보안 설정
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/gdgoc-report-server/logs
+
+[Install]
+WantedBy=multi-user.target

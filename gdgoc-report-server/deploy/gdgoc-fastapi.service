@@ -1,0 +1,25 @@
+[Unit]
+Description=GDGoC FastAPI Inference Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+
+# === 경로를 실제 환경에 맞게 수정하세요 ===
+WorkingDirectory=/home/ubuntu/Chrome_extension_server/backend
+ExecStart=/home/ubuntu/Chrome_extension_server/backend/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+# venv 경로가 다르면 위 ExecStart를 수정하세요
+# conda를 쓰면: ExecStart=/home/ubuntu/miniconda3/envs/myenv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gdgoc-fastapi
+
+[Install]
+WantedBy=multi-user.target

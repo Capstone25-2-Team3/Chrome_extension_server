@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/gdgoc_report
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    hikari:
+      maximum-pool-size: 10
+
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    com.gdgoc.report: INFO
+    org.hibernate.SQL: WARN
