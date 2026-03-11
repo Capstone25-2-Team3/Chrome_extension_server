@@ -1,0 +1,99 @@
+name: Deploy Spring Boot Report Server
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'report-server/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build with Gradle
+        working-directory: report-server
+        run: |
+          chmod +x gradlew
+          ./gradlew bootJar
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p /home/ubuntu/gdgoc-report-server
+
+      - name: Copy jar to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "report-server/build/libs/gdgoc-report.jar"
+          target: "/home/ubuntu/gdgoc-report-server/"
+          strip_components: 3
+
+      - name: Copy service file and restart
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # .env 파일 생성 (없을 때만)
+            if [ ! -f /home/ubuntu/gdgoc-report-server/.env ]; then
+              echo "DB_USER=gdgoc" > /home/ubuntu/gdgoc-report-server/.env
+              echo "DB_PASS=${{ secrets.DB_PASS }}" >> /home/ubuntu/gdgoc-report-server/.env
+            fi
+
+            # systemd 서비스 파일 생성
+            sudo tee /etc/systemd/system/gdgoc-report.service > /dev/null << 'SERVICEEOF'
+            [Unit]
+            Description=GDGoC Report Server (Spring Boot)
+            After=network.target postgresql.service
+
+            [Service]
+            Type=simple
+            User=ubuntu
+            Group=ubuntu
+            WorkingDirectory=/home/ubuntu/gdgoc-report-server
+            ExecStart=/usr/bin/java -jar -Xmx512m -Dspring.profiles.active=prod gdgoc-report.jar
+            EnvironmentFile=/home/ubuntu/gdgoc-report-server/.env
+            Restart=always
+            RestartSec=5
+            StandardOutput=journal
+            StandardError=journal
+            SyslogIdentifier=gdgoc-report
+
+            [Install]
+            WantedBy=multi-user.target
+            SERVICEEOF
+
+            sudo systemctl daemon-reload
+            sudo systemctl enable gdgoc-report
+            sudo systemctl restart gdgoc-report
+
+            # 헬스체크 (최대 30초 대기)
+            echo "Waiting for server to start..."
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+                echo "✅ Server is up! (${i}s)"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "❌ Server failed to start"
+            journalctl -u gdgoc-report -n 20 --no-pager
+            exit 1
